@@ -1,0 +1,9 @@
+.zig-cache
+zig-out
+.DS_Store
+bench/benchmark_results.*
+bench/*.xml
+media_library.xml
+benchmark_*
+bak/
+.vscode

@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<library>
+    <metadata>
+        <name>City Central Library</name>
+        <established>1952</established>
+        <location city="Springfield" state="IL" country="USA"/>
+    </metadata>
+
+    <books>
+        <book id="b001" isbn="978-0-123456-78-9" available="true">
+            <title>The Art of Programming</title>
+            <authors>
+                <author>
+                    <name>Alice Johnson</name>
+                    <email>alice@example.com</email>
+                </author>
+                <author>
+                    <name>Bob Smith</name>
+                    <email>bob@example.com</email>
+                </author>
+            </authors>
+            <publisher>Tech Press</publisher>
+            <year>2020</year>
+            <pages>542</pages>
+            <price currency="USD">49.99</price>
+            <categories>
+                <category>Programming</category>
+                <category>Computer Science</category>
+            </categories>
+            <description><![CDATA[A comprehensive guide to modern programming techniques and best practices. Covers algorithms, data structures, and design patterns.]]></description>
+            <reviews>
+                <review rating="5">
+                    <reviewer>Jane Doe</reviewer>
+                    <comment>Excellent book for both beginners and experienced programmers!</comment>
+                    <date>2023-06-15</date>
+                </review>
+                <review rating="4">
+                    <reviewer>Mike Wilson</reviewer>
+                    <comment>Great content, though some examples could be clearer.</comment>
+                    <date>2023-08-22</date>
+                </review>
+            </reviews>
+        </book>
+
+        <book id="b002" isbn="978-1-234567-89-0" available="false">
+            <title>History of Ancient Rome</title>
+            <authors>
+                <author>
+                    <name>Dr. Helen Marcus</name>
+                    <email>helen.marcus@university.edu</email>
+                </author>
+            </authors>
+            <publisher>Academic Books Ltd</publisher>
+            <year>2018</year>
+            <pages>789</pages>
+            <price currency="USD">65.00</price>
+            <categories>
+                <category>History</category>
+                <category>Ancient Civilizations</category>
+            </categories>
+            <description>An in-depth exploration of Roman civilization from its founding to its fall.</description>
+            <reviews>
+                <review rating="5">
+                    <reviewer>Prof. David Lee</reviewer>
+                    <comment>Masterful scholarship and engaging narrative.</comment>
+                    <date>2023-03-10</date>
+                </review>
+            </reviews>
+        </book>
+
+        <book id="b003" isbn="978-2-345678-90-1" available="true">
+            <title>Modern Web Development</title>
+            <authors>
+                <author>
+                    <name>Sarah Chen</name>
+                    <email>sarah@webdev.com</email>
+                </author>
+                <author>
+                    <name>Tom Rodriguez</name>
+                    <email>tom@frontend.dev</email>
+                </author>
+            </authors>
+            <publisher>Web Publications</publisher>
+            <year>2023</year>
+            <pages>425</pages>
+            <price currency="USD">39.95</price>
+            <categories>
+                <category>Web Development</category>
+                <category>JavaScript</category>
+                <category>Programming</category>
+            </categories>
+            <description>Learn modern web development with React, TypeScript, and Node.js.</description>
+        </book>
+    </books>
+
+    <!-- Processing instruction for transformation -->
+    <?xml-stylesheet type="text/xsl" href="library.xsl"?>
+
+    <statistics>
+        <total-books>3</total-books>
+        <available-books>2</available-books>
+        <total-authors>5</total-authors>
+        <average-price currency="USD">51.65</average-price>
+    </statistics>
+</library>
