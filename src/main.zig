@@ -24,8 +24,8 @@ pub fn main() !void {
     var buffer: [8 * 1024 * 1024]u8 = undefined;
     var reader = file.reader(&buffer);
 
-    // Initialize parser
-    var parser = PullParser.init(allocator, &reader.interface);
+    // Initialize parser (streaming mode for large files)
+    var parser = PullParser.initWithReader(allocator, &reader.interface);
     defer parser.deinit();
 
     // Parse the entire document

@@ -5,5 +5,4 @@ bench/benchmark_results.*
 bench/*.xml
 media_library.xml
 benchmark_*
-bak/
 .vscode

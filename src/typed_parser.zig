@@ -784,8 +784,78 @@ pub fn TypedParser(comptime T: type) type {
         pull_parser: PullParser,
         result: T,
 
+        /// Initialize with a Reader for streaming parsing (large files)
         pub fn init(allocator: std.mem.Allocator, reader: *std.Io.Reader) !@This() {
-            var pull_parser = PullParser.init(allocator, reader);
+            var pull_parser = PullParser.initWithReader(allocator, reader);
+            errdefer pull_parser.deinit();
+
+            // Skip to first element (root)
+            var root_elem: ?Event = null;
+            while (try pull_parser.next()) |event| {
+                if (event == .start_element) {
+                    root_elem = event;
+                    break;
+                }
+            }
+
+            if (root_elem == null) {
+                return error.NoRootElement;
+            }
+
+            const elem = root_elem.?.start_element;
+
+            // Parse root element based on whether it has iterators
+            const result = if (comptime hasIterator(T))
+                try parseLazyStruct(T, &pull_parser, elem.attributes, elem.name)
+            else
+                try parseEagerStruct(T, &pull_parser, elem.attributes, elem.name);
+
+            return .{
+                .allocator = allocator,
+                .pull_parser = pull_parser,
+                .result = result,
+            };
+        }
+
+        /// Initialize with XML in memory for faster parsing (small documents)
+        /// Performance: ~800-850 MB/s
+        pub fn initInMemory(allocator: std.mem.Allocator, xml: []const u8) !@This() {
+            var pull_parser = PullParser.initInMemory(allocator, xml);
+            errdefer pull_parser.deinit();
+
+            // Skip to first element (root)
+            var root_elem: ?Event = null;
+            while (try pull_parser.next()) |event| {
+                if (event == .start_element) {
+                    root_elem = event;
+                    break;
+                }
+            }
+
+            if (root_elem == null) {
+                return error.NoRootElement;
+            }
+
+            const elem = root_elem.?.start_element;
+
+            // Parse root element based on whether it has iterators
+            const result = if (comptime hasIterator(T))
+                try parseLazyStruct(T, &pull_parser, elem.attributes, elem.name)
+            else
+                try parseEagerStruct(T, &pull_parser, elem.attributes, elem.name);
+
+            return .{
+                .allocator = allocator,
+                .pull_parser = pull_parser,
+                .result = result,
+            };
+        }
+
+        /// Initialize with memory-mapped file for large documents
+        /// Best for large files (100+ MB) - OS handles paging automatically
+        /// Performance: ~550-800 MB/s depending on file size
+        pub fn initWithMmap(allocator: std.mem.Allocator, file_path: []const u8) !@This() {
+            var pull_parser = try PullParser.initWithMmap(allocator, file_path);
             errdefer pull_parser.deinit();
 
             // Skip to first element (root)
@@ -955,7 +1025,7 @@ test "parseEagerStruct simple" {
     ;
 
     var reader = std.Io.Reader.fixed(xml);
-    var parser = PullParser.init(std.testing.allocator, &reader);
+    var parser = PullParser.initWithReader(std.testing.allocator, &reader);
     defer parser.deinit();
 
     // Skip to first element
@@ -991,7 +1061,7 @@ test "parseEagerStruct nested" {
     ;
 
     var reader = std.Io.Reader.fixed(xml);
-    var parser = PullParser.init(std.testing.allocator, &reader);
+    var parser = PullParser.initWithReader(std.testing.allocator, &reader);
     defer parser.deinit();
 
     // Skip to first element
@@ -1023,7 +1093,7 @@ test "default values - primitives" {
     ;
 
     var reader = std.Io.Reader.fixed(xml);
-    var parser = PullParser.init(std.testing.allocator, &reader);
+    var parser = PullParser.initWithReader(std.testing.allocator, &reader);
     defer parser.deinit();
 
     var elem: Event = undefined;
@@ -1053,7 +1123,7 @@ test "default values - string literal" {
     ;
 
     var reader = std.Io.Reader.fixed(xml);
-    var parser = PullParser.init(std.testing.allocator, &reader);
+    var parser = PullParser.initWithReader(std.testing.allocator, &reader);
     defer parser.deinit();
 
     var elem: Event = undefined;
@@ -1081,7 +1151,7 @@ test "default values - optional with default" {
     ;
 
     var reader = std.Io.Reader.fixed(xml);
-    var parser = PullParser.init(std.testing.allocator, &reader);
+    var parser = PullParser.initWithReader(std.testing.allocator, &reader);
     defer parser.deinit();
 
     var elem: Event = undefined;
@@ -1116,7 +1186,7 @@ test "default values - in lazy struct" {
     ;
 
     var reader = std.Io.Reader.fixed(xml);
-    var parser = PullParser.init(std.testing.allocator, &reader);
+    var parser = PullParser.initWithReader(std.testing.allocator, &reader);
     defer parser.deinit();
 
     var elem: Event = undefined;
@@ -1158,7 +1228,7 @@ test "custom type parser - parseXml" {
     ;
 
     var reader = std.Io.Reader.fixed(xml);
-    var parser = PullParser.init(std.testing.allocator, &reader);
+    var parser = PullParser.initWithReader(std.testing.allocator, &reader);
     defer parser.deinit();
 
     var elem: Event = undefined;
@@ -1200,7 +1270,7 @@ test "custom type parser - optional custom type" {
     ;
 
     var reader1 = std.Io.Reader.fixed(xml1);
-    var parser1 = PullParser.init(std.testing.allocator, &reader1);
+    var parser1 = PullParser.initWithReader(std.testing.allocator, &reader1);
     defer parser1.deinit();
 
     var elem1: Event = undefined;
@@ -1222,7 +1292,7 @@ test "custom type parser - optional custom type" {
     ;
 
     var reader2 = std.Io.Reader.fixed(xml2);
-    var parser2 = PullParser.init(std.testing.allocator, &reader2);
+    var parser2 = PullParser.initWithReader(std.testing.allocator, &reader2);
     defer parser2.deinit();
 
     var elem2: Event = undefined;
@@ -1261,7 +1331,7 @@ test "custom type parser - error propagation" {
     ;
 
     var reader = std.Io.Reader.fixed(xml);
-    var parser = PullParser.init(std.testing.allocator, &reader);
+    var parser = PullParser.initWithReader(std.testing.allocator, &reader);
     defer parser.deinit();
 
     var elem: Event = undefined;
@@ -1292,7 +1362,7 @@ test "name mapping - struct fields" {
     ;
 
     var reader = std.Io.Reader.fixed(xml);
-    var parser = PullParser.init(std.testing.allocator, &reader);
+    var parser = PullParser.initWithReader(std.testing.allocator, &reader);
     defer parser.deinit();
 
     var elem: Event = undefined;
@@ -1326,7 +1396,7 @@ test "name mapping - partial mapping" {
     ;
 
     var reader = std.Io.Reader.fixed(xml);
-    var parser = PullParser.init(std.testing.allocator, &reader);
+    var parser = PullParser.initWithReader(std.testing.allocator, &reader);
     defer parser.deinit();
 
     var elem: Event = undefined;
@@ -1371,7 +1441,7 @@ test "name mapping - child elements" {
     ;
 
     var reader = std.Io.Reader.fixed(xml);
-    var parser = PullParser.init(std.testing.allocator, &reader);
+    var parser = PullParser.initWithReader(std.testing.allocator, &reader);
     defer parser.deinit();
 
     var elem: Event = undefined;
@@ -1420,7 +1490,7 @@ test "name mapping - union variants" {
     ;
 
     var reader = std.Io.Reader.fixed(xml);
-    var parser = PullParser.init(std.testing.allocator, &reader);
+    var parser = PullParser.initWithReader(std.testing.allocator, &reader);
     defer parser.deinit();
 
     var elem: Event = undefined;

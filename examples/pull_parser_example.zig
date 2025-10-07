@@ -93,7 +93,7 @@ pub fn main() !void {
 
     // Initialize reader and parser
     var reader = std.Io.Reader.fixed(xml_content);
-    var parser = PullParser.init(allocator, &reader);
+    var parser = PullParser.initWithReader(allocator, &reader);
     defer parser.deinit();
 
     var books = std.ArrayList(Book){};

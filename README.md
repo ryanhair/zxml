@@ -535,8 +535,7 @@ var reader = std.Io.Reader.fixed(xml);
 
 ## Documentation
 
-- **[CLAUDE.md](CLAUDE.md)**: Comprehensive project documentation
-- **[TYPED_PARSER_PLAN.md](TYPED_PARSER_PLAN.md)**: Detailed TypedParser design document
+- **[CLAUDE.md](CLAUDE.md)**: Comprehensive project documentation for Claude Code
 - **[examples/](examples/)**: Working examples
 - **[bench/](bench/)**: Benchmark tools
 

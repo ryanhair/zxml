@@ -17,16 +17,18 @@ pub fn main() !void {
 
     const filename = args[1];
 
-    // Read the XML file
-    const file = try std.fs.cwd().openFile(filename, .{ .mode = .read_only });
-    var buffer: [8 * 1024 * 1024]u8 = undefined; // 8 MB buffer for better performance
-    var reader = file.reader(&buffer);
+    // Read entire XML file into memory
+    const file = try std.fs.cwd().openFile(filename, .{});
+    defer file.close();
 
-    // Initialize parser
-    var parser = PullParser.init(allocator, &reader.interface);
+    const xml = try file.readToEndAlloc(allocator, 1024 * 1024 * 1024); // 1 GB max
+    defer allocator.free(xml);
+
+    // Initialize parser (in-memory mode)
+    var parser = PullParser.initInMemory(allocator, xml);
     defer parser.deinit();
 
-    // Benchmark: parse and count like TypedParser does
+    // Benchmark: parse and count like bench_pull_parser does
     const start = std.time.nanoTimestamp();
 
     var library_count: u32 = 0;
@@ -74,12 +76,12 @@ pub fn main() !void {
     const end = std.time.nanoTimestamp();
     const elapsed_ns = end - start;
     const elapsed_ms = @as(f64, @floatFromInt(elapsed_ns)) / 1_000_000.0;
-    const file_info = try file.stat();
-    const throughput_mbs = (@as(f64, @floatFromInt(file_info.size)) / (1024.0 * 1024.0)) / (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+    const file_size = xml.len;
+    const throughput_mbs = (@as(f64, @floatFromInt(file_size)) / (1024.0 * 1024.0)) / (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
 
-    // Print results (matching TypedParser output format)
+    // Print results (matching bench_pull_parser output format)
     std.debug.print("File: {s}\n", .{filename});
-    std.debug.print("Size: {d} bytes ({d:.2} MB)\n", .{ file_info.size, @as(f64, @floatFromInt(file_info.size)) / (1024.0 * 1024.0) });
+    std.debug.print("Size: {d} bytes ({d:.2} MB)\n", .{ file_size, @as(f64, @floatFromInt(file_size)) / (1024.0 * 1024.0) });
     std.debug.print("Libraries: {d}\n", .{library_count});
     std.debug.print("Collections: {d}\n", .{collection_count});
     std.debug.print("Items: {d} (books: {d}, movies: {d}, music: {d})\n", .{ book_count + movie_count + music_count, book_count, movie_count, music_count });

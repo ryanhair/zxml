@@ -182,10 +182,10 @@ pub fn build(b: *std.Build) void {
     run_pull_parser_example_step.dependOn(&run_pull_parser_example.step);
 
     // Create pull_parser benchmark executable
-    const bench_pull_parser = b.addExecutable(.{
-        .name = "bench_pull_parser",
+    const bench_pull_parser_streaming = b.addExecutable(.{
+        .name = "bench_pull_parser_streaming",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("bench/bench_pull_parser.zig"),
+            .root_source_file = b.path("bench/bench_pull_parser_streaming.zig"),
             .target = target,
             .optimize = optimize,
             .imports = &.{
@@ -194,16 +194,64 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
-    b.installArtifact(bench_pull_parser);
+    b.installArtifact(bench_pull_parser_streaming);
 
     // Create run step for pull_parser benchmark
     const run_bench_pull_parser_step = b.step("bench-pull", "Run the pull parser benchmark");
-    const run_bench_pull_parser = b.addRunArtifact(bench_pull_parser);
+    const run_bench_pull_parser = b.addRunArtifact(bench_pull_parser_streaming);
     run_bench_pull_parser.step.dependOn(b.getInstallStep());
     if (b.args) |args| {
         run_bench_pull_parser.addArgs(args);
     }
     run_bench_pull_parser_step.dependOn(&run_bench_pull_parser.step);
+
+    // Create PullParser in-memory benchmark executable
+    const bench_pull_parser_in_memory = b.addExecutable(.{
+        .name = "bench_pull_parser_in_memory",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("bench/bench_pull_parser_in_memory.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{
+                .{ .name = "pull_parser", .module = pull_parser_mod },
+            },
+        }),
+    });
+
+    b.installArtifact(bench_pull_parser_in_memory);
+
+    // Create run step for PullParser in-memory benchmark
+    const run_bench_pull_parser_in_memory_step = b.step("bench-pull-memory", "Run the PullParser in-memory benchmark");
+    const run_bench_pull_parser_in_memory = b.addRunArtifact(bench_pull_parser_in_memory);
+    run_bench_pull_parser_in_memory.step.dependOn(b.getInstallStep());
+    if (b.args) |args| {
+        run_bench_pull_parser_in_memory.addArgs(args);
+    }
+    run_bench_pull_parser_in_memory_step.dependOn(&run_bench_pull_parser_in_memory.step);
+
+    // Create PullParser mmap benchmark executable
+    const bench_pull_parser_mmap = b.addExecutable(.{
+        .name = "bench_pull_parser_mmap",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("bench/bench_pull_parser_mmap.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{
+                .{ .name = "pull_parser", .module = pull_parser_mod },
+            },
+        }),
+    });
+
+    b.installArtifact(bench_pull_parser_mmap);
+
+    // Create run step for PullParser mmap benchmark
+    const run_bench_pull_parser_mmap_step = b.step("bench-pull-mmap", "Run the PullParser memory-mapped benchmark");
+    const run_bench_pull_parser_mmap = b.addRunArtifact(bench_pull_parser_mmap);
+    run_bench_pull_parser_mmap.step.dependOn(b.getInstallStep());
+    if (b.args) |args| {
+        run_bench_pull_parser_mmap.addArgs(args);
+    }
+    run_bench_pull_parser_mmap_step.dependOn(&run_bench_pull_parser_mmap.step);
 
     // Create XML generator executable
     const generate_xml = b.addExecutable(.{
@@ -251,10 +299,10 @@ pub fn build(b: *std.Build) void {
     run_typed_parser_example_step.dependOn(&run_typed_parser_example.step);
 
     // Create typed_parser benchmark executable
-    const bench_typed_parser = b.addExecutable(.{
-        .name = "bench_typed_parser",
+    const bench_typed_parser_streaming = b.addExecutable(.{
+        .name = "bench_typed_parser_streaming",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("bench/bench_typed_parser.zig"),
+            .root_source_file = b.path("bench/bench_typed_parser_streaming.zig"),
             .target = target,
             .optimize = optimize,
             .imports = &.{
@@ -263,16 +311,64 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
-    b.installArtifact(bench_typed_parser);
+    b.installArtifact(bench_typed_parser_streaming);
 
     // Create run step for typed_parser benchmark
     const run_bench_typed_parser_step = b.step("bench-typed", "Run the typed parser benchmark");
-    const run_bench_typed_parser = b.addRunArtifact(bench_typed_parser);
+    const run_bench_typed_parser = b.addRunArtifact(bench_typed_parser_streaming);
     run_bench_typed_parser.step.dependOn(b.getInstallStep());
     if (b.args) |args| {
         run_bench_typed_parser.addArgs(args);
     }
     run_bench_typed_parser_step.dependOn(&run_bench_typed_parser.step);
+
+    // Create TypedParser in-memory benchmark executable
+    const bench_typed_parser_in_memory = b.addExecutable(.{
+        .name = "bench_typed_parser_in_memory",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("bench/bench_typed_parser_in_memory.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{
+                .{ .name = "zxml", .module = mod },
+            },
+        }),
+    });
+
+    b.installArtifact(bench_typed_parser_in_memory);
+
+    // Create run step for TypedParser in-memory benchmark
+    const run_bench_typed_parser_in_memory_step = b.step("bench-typed-memory", "Run the TypedParser in-memory benchmark");
+    const run_bench_typed_parser_in_memory = b.addRunArtifact(bench_typed_parser_in_memory);
+    run_bench_typed_parser_in_memory.step.dependOn(b.getInstallStep());
+    if (b.args) |args| {
+        run_bench_typed_parser_in_memory.addArgs(args);
+    }
+    run_bench_typed_parser_in_memory_step.dependOn(&run_bench_typed_parser_in_memory.step);
+
+    // Create typed_parser mmap benchmark executable
+    const bench_typed_parser_mmap = b.addExecutable(.{
+        .name = "bench_typed_parser_mmap",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("bench/bench_typed_parser_mmap.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{
+                .{ .name = "zxml", .module = mod },
+            },
+        }),
+    });
+
+    b.installArtifact(bench_typed_parser_mmap);
+
+    // Create run step for typed_parser mmap benchmark
+    const run_bench_typed_parser_mmap_step = b.step("bench-typed-mmap", "Run the typed parser mmap benchmark");
+    const run_bench_typed_parser_mmap = b.addRunArtifact(bench_typed_parser_mmap);
+    run_bench_typed_parser_mmap.step.dependOn(b.getInstallStep());
+    if (b.args) |args| {
+        run_bench_typed_parser_mmap.addArgs(args);
+    }
+    run_bench_typed_parser_mmap_step.dependOn(&run_bench_typed_parser_mmap.step);
 
     // Just like flags, top level steps are also listed in the `--help` menu.
     //
