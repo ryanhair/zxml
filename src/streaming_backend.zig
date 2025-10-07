@@ -58,7 +58,6 @@ pub const Event = union(enum) {
 pub const Attribute = struct {
     name: []const u8,
     value: []const u8,
-    namespace: ?[]const u8 = null,
 };
 
 /// Stack entry for element hierarchy tracking
@@ -1000,4 +999,3 @@ pub const StreamingBackend = struct {
         return self.depth;
     }
 };
-
