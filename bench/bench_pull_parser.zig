@@ -19,7 +19,7 @@ pub fn main() !void {
 
     // Read the XML file
     const file = try std.fs.cwd().openFile(filename, .{ .mode = .read_only });
-    var buffer: [256 * 1024]u8 = undefined;
+    var buffer: [8 * 1024 * 1024]u8 = undefined; // 8 MB buffer for better performance
     var reader = file.reader(&buffer);
 
     // Initialize parser

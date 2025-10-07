@@ -64,8 +64,8 @@ pub const Attribute = struct {
 /// Stack entry for element hierarchy tracking
 const StackEntry = struct {
     name: []const u8,
-    attr_start: usize,  // Index in attr_workspace where this element's attributes start
-    attr_count: usize,  // Number of attributes for this element
+    attr_start: usize, // Index in attr_workspace where this element's attributes start
+    attr_count: usize, // Number of attributes for this element
     buffer_mark: usize, // Position in string buffer to reset to on pop
 };
 
@@ -770,30 +770,51 @@ pub const PullParser = struct {
     /// Parse an XML name with fast-path for ASCII names
     /// Most XML names are simple ASCII, so we optimize for that case
     fn parseName(self: *PullParser) ![]const u8 {
-        // Peek ahead to find name length
+        // Fast path: peek a reasonable chunk for typical names
+        const initial_chunk_size = 64;
+        const chunk = self.reader.peek(initial_chunk_size) catch |err| switch (err) {
+            error.EndOfStream => blk: {
+                // Try to get at least 1 byte
+                const partial = self.reader.peek(1) catch |e| switch (e) {
+                    error.EndOfStream => return error.InvalidElementName,
+                    else => return e,
+                };
+                break :blk partial;
+            },
+            else => return err,
+        };
+
+        // Scan for delimiter in the chunk
         var len: usize = 0;
-        while (true) {
-            const buffered = try self.reader.peek(len + 1);
-            if (buffered.len <= len) {
-                // End of stream
-                break;
-            }
-
-            const byte = buffered[len];
-
-            // Check if this is a delimiter
+        while (len < chunk.len) : (len += 1) {
+            const byte = chunk[len];
             if (byte == ' ' or byte == '\t' or byte == '\n' or byte == '\r' or
                 byte == '>' or byte == '/' or byte == '=' or byte == '<')
             {
                 break;
             }
+        }
 
-            // Valid name character, continue
-            len += 1;
+        // If we scanned the whole chunk without finding delimiter, continue looking
+        // This happens either when name is long OR when chunk is small (end of buffer)
+        if (len == chunk.len) {
+            // Try to get more data to find the delimiter
+            while (true) {
+                const buffered = try self.reader.peek(len + 1);
+                if (buffered.len <= len) {
+                    // No more data available, end of stream
+                    break;
+                }
 
-            // Sanity check: names shouldn't be > 1024 chars
-            if (len > 1024) {
-                return error.InvalidElementName;
+                const byte = buffered[len];
+                if (byte == ' ' or byte == '\t' or byte == '\n' or byte == '\r' or
+                    byte == '>' or byte == '/' or byte == '=' or byte == '<')
+                {
+                    break;
+                }
+
+                len += 1;
+                if (len > 1024) return error.InvalidElementName;
             }
         }
 
@@ -846,17 +867,39 @@ pub const PullParser = struct {
 
     /// Skip whitespace characters
     fn skipWhitespace(self: *PullParser) !void {
+        const chunk_size = 64;
+
         while (true) {
-            const byte = self.reader.peekByte() catch |err| switch (err) {
-                error.EndOfStream => return,
+            const chunk = self.reader.peek(chunk_size) catch |err| switch (err) {
+                error.EndOfStream => blk: {
+                    // Try to peek at least 1 byte
+                    const partial = self.reader.peek(1) catch |e| switch (e) {
+                        error.EndOfStream => return, // No more data, we're done
+                        else => return e,
+                    };
+                    break :blk partial;
+                },
                 else => return err,
             };
 
-            if (!std.ascii.isWhitespace(byte)) {
-                return;
+            if (chunk.len == 0) return;
+
+            // Count consecutive whitespace
+            var count: usize = 0;
+            for (chunk) |byte| {
+                if (!std.ascii.isWhitespace(byte)) break;
+                count += 1;
             }
 
-            self.reader.toss(1);
+            if (count > 0) {
+                self.reader.toss(count);
+                // If we didn't consume the whole chunk, we found non-whitespace and are done
+                if (count < chunk.len) return;
+                // Otherwise, all of chunk was whitespace, continue to next chunk
+            } else {
+                // No whitespace found at current position
+                return;
+            }
         }
     }
 
@@ -865,25 +908,49 @@ pub const PullParser = struct {
     /// Does NOT store the result - caller must store if needed
     fn takeUntilByte(self: *PullParser, delimiter: u8) ![]const u8 {
         var len: usize = 0;
+        // Start with small chunk for common short tokens, grow for longer ones
+        var chunk_size: usize = 64;
+
         while (true) {
-            const buffered = try self.reader.peek(len + 1);
-            if (buffered.len <= len) {
+            // Try to peek a chunk, but handle EndOfStream (peek as much as available)
+            const buffered = self.reader.peek(len + chunk_size) catch |err| switch (err) {
+                error.EndOfStream => blk: {
+                    // Try smaller peek to get whatever is available
+                    const partial = self.reader.peek(len + 1) catch |e| switch (e) {
+                        error.EndOfStream => return error.UnterminatedToken,
+                        else => return e,
+                    };
+                    if (partial.len <= len) return error.UnterminatedToken;
+                    break :blk partial;
+                },
+                else => return err,
+            };
+
+            const available = buffered.len - len;
+            if (available == 0) {
                 return error.UnterminatedToken;
             }
 
-            if (buffered[len] == delimiter) {
-                break;
+            // Search for delimiter in the newly available portion
+            const search_slice = buffered[len..buffered.len];
+            if (std.mem.indexOfScalar(u8, search_slice, delimiter)) |offset| {
+                // Found delimiter at position len + offset
+                return try self.reader.take(len + offset);
             }
 
-            len += 1;
+            // Delimiter not found in this chunk, continue from end of buffer
+            len = buffered.len;
+
+            // Grow chunk size for longer tokens (up to 512 bytes)
+            if (chunk_size < 512) {
+                chunk_size = @min(chunk_size * 2, 512);
+            }
 
             // Sanity check: prevent unbounded growth
             if (len > 16 * 1024 * 1024) {
                 return error.TokenTooLarge;
             }
         }
-
-        return try self.reader.take(len);
     }
 
     /// Read until a specific pattern is found (not including the pattern)
