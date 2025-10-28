@@ -23,6 +23,7 @@ pub const PullParser = struct {
     pub fn initWithReader(allocator: std.mem.Allocator, reader: *std.Io.Reader) PullParser {
         return .{
             .backend = .{ .streaming = StreamingBackend.init(allocator, reader) },
+            .mmap_data = null,
         };
     }
 
@@ -34,6 +35,7 @@ pub const PullParser = struct {
     pub fn initInMemory(allocator: std.mem.Allocator, xml: []const u8) PullParser {
         return .{
             .backend = .{ .in_memory = InMemoryBackend.init(allocator, xml) },
+            .mmap_data = null,
         };
     }
 
