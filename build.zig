@@ -299,28 +299,20 @@ pub fn build(b: *std.Build) void {
     run_typed_parser_example_step.dependOn(&run_typed_parser_example.step);
 
     // Create typed_parser example executable
-    const tiger_example = b.addExecutable(.{
-        .name = "tiger_example",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("examples/tiger_example.zig"),
-            .target = target,
-            .optimize = optimize,
-            .imports = &.{
-                .{ .name = "zxml", .module = mod },
-            },
-        }),
+    const svg_parser_test_mod = b.createModule(.{
+        .root_source_file = b.path("src/tests/svg_parser_test.zig"),
+        .target = target,
+        // Note: the crashes only occur in release builds
+        // .optimize = .ReleaseSafe,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "zxml", .module = mod },
+        },
     });
 
-    b.installArtifact(tiger_example);
-
-    // Create run step for tiger example
-    const run_tiger_example_step = b.step("run-tiger-example", "Run the tiger example");
-    const run_tiger_example = b.addRunArtifact(tiger_example);
-    run_tiger_example.step.dependOn(b.getInstallStep());
-    if (b.args) |args| {
-        run_tiger_example.addArgs(args);
-    }
-    run_tiger_example_step.dependOn(&run_tiger_example.step);
+    const svg_parser_tests = b.addTest(.{ .root_module = svg_parser_test_mod });
+    const run_svg_parser_tests = b.addRunArtifact(svg_parser_tests);
+    test_step.dependOn(&run_svg_parser_tests.step);
 
     // Create typed_parser benchmark executable
     const bench_typed_parser_streaming = b.addExecutable(.{
