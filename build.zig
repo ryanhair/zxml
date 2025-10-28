@@ -298,6 +298,22 @@ pub fn build(b: *std.Build) void {
     }
     run_typed_parser_example_step.dependOn(&run_typed_parser_example.step);
 
+    // Create typed_parser example executable
+    const svg_parser_test_mod = b.createModule(.{
+        .root_source_file = b.path("src/tests/svg_parser_test.zig"),
+        .target = target,
+        // Note: the crashes only occur in release builds
+        // .optimize = .ReleaseSafe,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "zxml", .module = mod },
+        },
+    });
+
+    const svg_parser_tests = b.addTest(.{ .root_module = svg_parser_test_mod });
+    const run_svg_parser_tests = b.addRunArtifact(svg_parser_tests);
+    test_step.dependOn(&run_svg_parser_tests.step);
+
     // Create typed_parser benchmark executable
     const bench_typed_parser_streaming = b.addExecutable(.{
         .name = "bench_typed_parser_streaming",

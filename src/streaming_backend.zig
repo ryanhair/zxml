@@ -105,6 +105,7 @@ pub const StreamingBackend = struct {
 
     // Self-closing element tracking
     pending_end_element: ?[]const u8 = null,
+    pending_attr_start: usize = 0,
 
     /// Initialize streaming backend with a Reader (caller owns the buffer passed to reader)
     pub fn init(allocator: std.mem.Allocator, reader: *std.Io.Reader) StreamingBackend {
@@ -136,6 +137,7 @@ pub const StreamingBackend = struct {
         // Check for pending self-closing end element first
         if (self.pending_end_element) |name| {
             self.pending_end_element = null;
+            self.total_attr_count = self.pending_attr_start;
             return Event{ .end_element = .{ .name = name } };
         }
 
@@ -285,6 +287,7 @@ pub const StreamingBackend = struct {
         // For self-closing elements, schedule end event for next call
         if (self_closing) {
             self.pending_end_element = name;
+            self.pending_attr_start = attr_start;
         }
 
         return start_event;
